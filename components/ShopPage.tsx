@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Product } from '../types';
 import ProductCard from './ProductCard';
-import { Filter, SlidersHorizontal, ChevronDown, X, Check } from 'lucide-react';
+import { Filter, SlidersHorizontal, ChevronDown, X, Check, Search } from 'lucide-react';
 
 interface ShopPageProps {
   products: Product[];
@@ -11,8 +11,9 @@ interface ShopPageProps {
 const ShopPage: React.FC<ShopPageProps> = ({ products, onAddToCart }) => {
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [priceRange, setPriceRange] = useState<{min: string, max: string}>({ min: '', max: '' });
+  const [maxPrice, setMaxPrice] = useState<number>(10000);
   const [sortBy, setSortBy] = useState<string>('featured');
+  const [shopSearch, setShopSearch] = useState('');
   const [inStockOnly, setInStockOnly] = useState(false);
 
   // Extract Categories from the passed products
@@ -21,9 +22,23 @@ const ShopPage: React.FC<ShopPageProps> = ({ products, onAddToCart }) => {
     return ['All', ...cats.sort()];
   }, [products]);
 
+  // Determine Max Price from products for slider upper bound
+  const priceCeiling = useMemo(() => {
+    return Math.max(...products.map(p => p.price)) + 500;
+  }, [products]);
+
   // Filter and Sort Logic
   const processedProducts = useMemo(() => {
     let result = [...products];
+
+    // Local Search Filter
+    if (shopSearch) {
+      const term = shopSearch.toLowerCase();
+      result = result.filter(p => 
+        p.name.toLowerCase().includes(term) || 
+        p.category.toLowerCase().includes(term)
+      );
+    }
 
     // Category Filter
     if (selectedCategory !== 'All') {
@@ -31,14 +46,11 @@ const ShopPage: React.FC<ShopPageProps> = ({ products, onAddToCart }) => {
     }
 
     // Price Filter
-    const min = priceRange.min ? parseFloat(priceRange.min) : 0;
-    const max = priceRange.max ? parseFloat(priceRange.max) : Infinity;
-    result = result.filter(p => p.price >= min && p.price <= max);
+    result = result.filter(p => p.price <= maxPrice);
 
-    // Availability Filter (Simulated: assuming all are in stock for now)
+    // Availability Filter (Simulated)
     if (inStockOnly) {
-       // In a real app: result = result.filter(p => p.inStock);
-       // For now, we don't filter out anything as everything is "in stock"
+       // result = result.filter(p => p.inStock);
     }
     
     // Sort
@@ -50,15 +62,13 @@ const ShopPage: React.FC<ShopPageProps> = ({ products, onAddToCart }) => {
       result.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === 'name-desc') {
       result.sort((a, b) => b.name.localeCompare(a.name));
+    } else if (sortBy === 'popularity') {
+       // Mock popularity sort
+       result.sort((a, b) => 0.5 - Math.random());
     }
-    // 'featured' keeps original order
 
     return result;
-  }, [products, selectedCategory, priceRange, sortBy, inStockOnly]);
-
-  const handlePriceChange = (type: 'min' | 'max', value: string) => {
-    setPriceRange(prev => ({ ...prev, [type]: value }));
-  };
+  }, [products, selectedCategory, maxPrice, sortBy, inStockOnly, shopSearch]);
 
   return (
     <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
@@ -81,10 +91,9 @@ const ShopPage: React.FC<ShopPageProps> = ({ products, onAddToCart }) => {
               className="bg-panther-800 text-white text-sm px-3 py-2 rounded-lg border border-panther-700 outline-none focus:border-panther-accent"
             >
               <option value="featured">Featured</option>
+              <option value="popularity">Popularity</option>
               <option value="price-asc">Price: Low to High</option>
               <option value="price-desc">Price: High to Low</option>
-              <option value="name-asc">Name: A - Z</option>
-              <option value="name-desc">Name: Z - A</option>
             </select>
           </div>
         </div>
@@ -103,6 +112,21 @@ const ShopPage: React.FC<ShopPageProps> = ({ products, onAddToCart }) => {
             </div>
 
             <div className="space-y-8">
+              {/* Sidebar Search */}
+              <div>
+                <h3 className="text-white font-bold mb-4">Search</h3>
+                <div className="relative">
+                  <input 
+                    type="text"
+                    value={shopSearch}
+                    onChange={(e) => setShopSearch(e.target.value)}
+                    placeholder="Search products..."
+                    className="w-full bg-panther-800 border border-panther-700 rounded-lg py-2 pl-3 pr-10 text-white focus:border-panther-accent outline-none placeholder-gray-500"
+                  />
+                  <Search className="absolute right-3 top-2.5 text-gray-500" size={18} />
+                </div>
+              </div>
+
               {/* Category Filter */}
               <div>
                 <h3 className="text-white font-bold mb-4 flex items-center gap-2">
@@ -135,56 +159,31 @@ const ShopPage: React.FC<ShopPageProps> = ({ products, onAddToCart }) => {
                 </div>
               </div>
 
-              {/* Price Filter */}
+              {/* Price Filter (Slider) */}
               <div>
-                <h3 className="text-white font-bold mb-4">Price Range (₹)</h3>
-                <div className="grid grid-cols-2 gap-3 mb-2">
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={priceRange.min}
-                    onChange={(e) => handlePriceChange('min', e.target.value)}
-                    className="w-full bg-panther-800 border border-panther-700 rounded p-2 text-sm text-white focus:border-panther-accent outline-none"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Max"
-                    value={priceRange.max}
-                    onChange={(e) => handlePriceChange('max', e.target.value)}
-                    className="w-full bg-panther-800 border border-panther-700 rounded p-2 text-sm text-white focus:border-panther-accent outline-none"
-                  />
+                <div className="flex justify-between mb-2">
+                   <h3 className="text-white font-bold">Max Price</h3>
+                   <span className="text-panther-accent font-bold">₹{maxPrice}</span>
                 </div>
-              </div>
-
-              {/* Availability Filter */}
-              <div>
-                <h3 className="text-white font-bold mb-4">Availability</h3>
-                <label className="flex items-center gap-3 cursor-pointer group">
-                   <div className={`
-                        w-5 h-5 rounded border flex items-center justify-center transition-colors
-                        ${inStockOnly 
-                          ? 'bg-panther-accent border-panther-accent' 
-                          : 'border-gray-600 group-hover:border-gray-400'}
-                      `}>
-                         {inStockOnly && <Check size={14} className="text-white" />}
-                      </div>
-                  <input 
-                    type="checkbox"
-                    checked={inStockOnly}
-                    onChange={(e) => setInStockOnly(e.target.checked)}
-                    className="hidden"
-                  />
-                  <span className="text-sm text-gray-400 group-hover:text-gray-300">In Stock Only</span>
-                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max={priceCeiling}
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(Number(e.target.value))}
+                  className="w-full h-2 bg-panther-800 rounded-lg appearance-none cursor-pointer accent-panther-accent"
+                  style={{ accentColor: '#8b5cf6' }}
+                />
               </div>
               
               <button 
                 onClick={() => {
                   setSelectedCategory('All');
-                  setPriceRange({ min: '', max: '' });
-                  setInStockOnly(false);
+                  setMaxPrice(priceCeiling);
+                  setSortBy('featured');
+                  setShopSearch('');
                 }}
-                className="text-panther-accent text-sm hover:underline"
+                className="text-panther-accent text-sm hover:underline block"
               >
                 Reset All Filters
               </button>
@@ -193,7 +192,7 @@ const ShopPage: React.FC<ShopPageProps> = ({ products, onAddToCart }) => {
                 onClick={() => setIsMobileFilterOpen(false)}
                 className="w-full mt-8 bg-panther-accent text-white font-bold py-3 rounded-lg lg:hidden"
               >
-                Apply Filters
+                View Results
               </button>
             </div>
           </div>
@@ -214,7 +213,8 @@ const ShopPage: React.FC<ShopPageProps> = ({ products, onAddToCart }) => {
                     onChange={(e) => setSortBy(e.target.value)}
                     className="appearance-none bg-panther-800 text-white pl-4 pr-10 py-2 rounded-lg border border-panther-700 cursor-pointer focus:border-panther-accent outline-none"
                   >
-                    <option value="featured">Sort by: Featured</option>
+                    <option value="featured">Featured</option>
+                    <option value="popularity">Popularity</option>
                     <option value="price-asc">Price: Low to High</option>
                     <option value="price-desc">Price: High to Low</option>
                     <option value="name-asc">Name: A - Z</option>
@@ -242,8 +242,8 @@ const ShopPage: React.FC<ShopPageProps> = ({ products, onAddToCart }) => {
               <button 
                  onClick={() => {
                   setSelectedCategory('All');
-                  setPriceRange({ min: '', max: '' });
-                  setInStockOnly(false);
+                  setMaxPrice(priceCeiling);
+                  setShopSearch('');
                 }}
                 className="text-panther-accent hover:underline mt-2"
               >
