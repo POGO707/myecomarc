@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BLACKPANTHER | Premium Gear</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              panther: {
+                900: '#0f0f13',
+                800: '#1a1a23',
+                700: '#272735',
+                accent: '#8b5cf6', // Violet/Purple accent
+              }
+            },
+            animation: {
+              'bounce-slow': 'bounce 3s infinite',
+              'slide-up': 'slideUp 0.3s ease-out forwards',
+              'slide-down': 'slideDown 0.3s ease-out forwards',
+              'fade-in': 'fadeIn 0.5s ease-out forwards',
+            },
+            keyframes: {
+              slideUp: {
+                '0%': { transform: 'translateY(20px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              slideDown: {
+                '0%': { transform: 'translateY(-20px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    
+    <!-- Styles -->
+    <style>
+      body {
+        background-color: #0f0f13;
+        color: #e2e8f0;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+      /* Custom scrollbar for webkit */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1a1a23; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #4c1d95; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #6d28d9; 
+      }
+    </style>
+
+    <!-- Import Map -->
+    <script type="importmap">
+{
+  "imports": {
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^6.22.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
+
+    <!-- Babel Standalone for in-browser JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Main Application Script -->
+    <script type="text/babel" data-type="module" data-presets="react,typescript">
+      import React, { useState, useEffect, useRef, useMemo } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { HashRouter, Routes, Route, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
+      import { 
+        X, Send, Database, CheckCircle, Banknote, QrCode, Loader2, MapPin, Copy, Check, 
+        MessageCircle, Trash2, ShoppingBag, Plus, Eye, Share2, Sparkles, Minimize2, 
+        ArrowRight, Zap, ArrowLeft, Star, Shield, Truck, RotateCcw, Filter, 
+        SlidersHorizontal, ChevronDown, Menu, Search 
+      } from 'lucide-react';
+      import { GoogleGenAI } from "@google/genai";
+
+      // ----------------------------------------------------------------------
+      // TYPES
+      // ----------------------------------------------------------------------
+      
+      // Interface definitions are stripped by Babel in browser but kept for clarity
+      interface Product {
+        id: string;
+        name: string;
+        price: number;
+        description: string;
+        category: string;
+        image: string;
+      }
+
+      interface CartItem extends Product {
+        quantity: number;
+      }
+
+      interface OrderDetails {
+        fullName: string;
+        phone: string;
+        houseNo: string;
+        area: string;
+        locality: string;
+        city: string;
+        state: string;
+        pincode: string;
+      }
+
+      interface ChatMessage {
+        role: 'user' | 'model';
+        text: string;
+      }
+
+      // ----------------------------------------------------------------------
+      // CONSTANTS
+      // ----------------------------------------------------------------------
+
+      const STORE_NAME = "BLACKPANTHER";
+      const WHATSAPP_NUMBER = "916289204920";
+      const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_XXXXXXXX_REPLACE_THIS_WITH_YOUR_REAL_URL/exec"; 
+
+      const PRODUCTS: Product[] = [
+        {
+          id: '1',
+          name: 'Stealth Smartwatch Ultra',
+          price: 2999,
+          description: 'Military grade durability, 30-day battery life, complete health tracking.',
+          category: 'Electronics',
+          image: 'https://picsum.photos/400/400?random=1'
+        },
+        {
+          id: '2',
+          name: 'Panther Bass Earbuds',
+          price: 1499,
+          description: 'Active noise cancelling, deep bass profile, waterproof casing.',
+          category: 'Audio',
+          image: 'https://picsum.photos/400/400?random=2'
+        },
+        {
+          id: '3',
+          name: 'Vibranium Tech Hoodie',
+          price: 1999,
+          description: 'Premium cotton blend, water-resistant coating, hidden tech pockets.',
+          category: 'Apparel',
+          image: 'https://picsum.photos/400/400?random=3'
+        },
+        {
+          id: '4',
+          name: 'Night Vision Glasses',
+          price: 899,
+          description: 'Anti-glare, blue light filtering, sleek matte black frame.',
+          category: 'Accessories',
+          image: 'https://picsum.photos/400/400?random=4'
+        },
+        {
+          id: '5',
+          name: 'Tactical Backpack',
+          price: 2499,
+          description: '40L capacity, modular MOLLE system, laptop compartment.',
+          category: 'Travel',
+          image: 'https://picsum.photos/400/400?random=5'
+        },
+        {
+          id: '6',
+          name: 'Shadow Gaming Mouse',
+          price: 1299,
+          description: 'RGB lighting, 16000 DPI sensor, programmable macro buttons.',
+          category: 'Gaming',
+          image: 'https://picsum.photos/400/400?random=6'
+        }
+      ];
+
+      // ----------------------------------------------------------------------
+      // SERVICES
+      // ----------------------------------------------------------------------
+
+      // Safe environment variable access for browser
+      const API_KEY = (typeof process !== 'undefined' && process.env && process.env.API_KEY) ? process.env.API_KEY : '';
+      const ai = new GoogleGenAI({ apiKey: API_KEY });
+
+      const getProductRecommendation = async (userQuery: string, chatHistory: {role: string, parts: {text: string}[]}[] = []): Promise<string> => {
+        try {
+          if (!API_KEY) {
+             return "I'm currently in offline mode (API Key missing). Please contact support.";
+          }
+
+          const productContext = PRODUCTS.map(p => 
+            `- ${p.name} (${p.category}): ₹${p.price}. ${p.description}`
+          ).join('\n');
+
+          const systemInstruction = `
+            You are 'PantherBot', the AI sales assistant for the BLACKPANTHER store.
+            
+            Our Product Catalog:
+            ${productContext}
+            
+            Goal: Help customers find products, compare prices, or check details.
+            Tone: Sleek, professional, helpful, slightly mysterious/cool (like the Black Panther theme).
+            Currency: INR (₹).
+            
+            Rules:
+            1. Only recommend products from our catalog.
+            2. Keep answers concise (under 50 words unless detail is requested).
+            3. If asked about shipping/returns, say "We offer 7-day returns and free shipping on prepaid orders."
+          `;
+
+          const chat = ai.chats.create({
+            model: 'gemini-2.5-flash',
+            config: {
+              systemInstruction: systemInstruction,
+            },
+            history: chatHistory as any,
+          });
+
+          const result = await chat.sendMessage({
+            message: userQuery
+          });
+
+          return result.text || "I'm having trouble connecting to the Vibranium network. Please try again.";
+        } catch (error) {
+          console.error("Gemini API Error:", error);
+          return "I am currently offline. Please browse our catalog manually.";
+        }
+      };
+
+      // ----------------------------------------------------------------------
+      // COMPONENTS
+      // ----------------------------------------------------------------------
+
+      // --- ProductCard ---
+      const ProductCard = ({ product, onAddToCart }) => {
+        const [copied, setCopied] = useState(false);
+
+        const handleShare = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const url = `${window.location.origin}/#/product/${product.id}`;
+          const shareData = {
+            title: product.name,
+            text: `Check out ${product.name} on BLACKPANTHER Store!`,
+            url: url
+          };
+
+          if (navigator.share) {
+            try {
+              await navigator.share(shareData);
+            } catch (err) {
+              console.error("Error sharing:", err);
+            }
+          } else {
+            try {
+              await navigator.clipboard.writeText(url);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            } catch (err) {
+              console.error("Failed to copy", err);
+            }
+          }
+        };
+
+        return (
+          <div className="bg-panther-800 rounded-xl overflow-hidden shadow-lg border border-panther-700 hover:border-panther-accent transition-all duration-300 group">
+            <Link to={`/product/${product.id}`} className="block relative h-64 overflow-hidden cursor-pointer">
+              <img 
+                src={product.image} 
+                alt={product.name} 
+                className="w-full h-full object-cover transform transition-transform duration-700 ease-out group-hover:scale-110"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-panther-900 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+              
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 backdrop-blur-[1px] gap-3">
+                 <span className="bg-panther-900/80 p-3 rounded-full text-white backdrop-blur-md border border-panther-accent shadow-xl transform scale-75 group-hover:scale-100 transition-transform duration-300 hover:bg-panther-accent">
+                   <Eye size={24} />
+                 </span>
+                 <button 
+                   onClick={handleShare}
+                   className="bg-panther-900/80 p-3 rounded-full text-white backdrop-blur-md border border-panther-accent shadow-xl transform scale-75 group-hover:scale-100 transition-transform duration-300 hover:bg-panther-accent"
+                   title="Share Product"
+                 >
+                   {copied ? <Check size={24} /> : <Share2 size={24} />}
+                 </button>
+              </div>
+
+              <div className="absolute bottom-4 left-4">
+                <span className="bg-panther-accent text-white text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-lg">
+                  {product.category}
+                </span>
+              </div>
+            </Link>
+            
+            <div className="p-5">
+              <div className="flex justify-between items-start mb-2">
+                <Link to={`/product/${product.id}`} className="hover:text-panther-accent transition-colors">
+                   <h3 className="text-xl font-bold text-white leading-tight">{product.name}</h3>
+                </Link>
+                <span className="text-panther-accent font-bold text-lg">₹{product.price}</span>
+              </div>
+              <p className="text-gray-400 text-sm mb-4 line-clamp-2">{product.description}</p>
+              
+              <button 
+                onClick={() => onAddToCart(product)}
+                className="w-full bg-panther-700 hover:bg-panther-accent text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors duration-200 active:scale-95"
+              >
+                <Plus size={18} />
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // --- CartSidebar ---
+      const CartSidebar = ({ isOpen, onClose, cart, onUpdateQuantity, onRemove, onCheckout }) => {
+        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        if (!isOpen) return null;
+
+        return (
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <div 
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={onClose}
+            ></div>
+
+            <div className="relative w-full max-w-md bg-panther-800 h-full shadow-2xl flex flex-col border-l border-panther-700 transform transition-transform duration-300">
+              <div className="p-5 flex items-center justify-between border-b border-panther-700">
+                <div className="flex items-center gap-2">
+                  <ShoppingBag className="text-panther-accent" />
+                  <h2 className="text-xl font-bold text-white">Your Cart</h2>
+                </div>
+                <button 
+                  onClick={onClose}
+                  className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-panther-700 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {cart.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                    <ShoppingBag size={48} className="mb-4 opacity-50" />
+                    <p>Your cart is empty.</p>
+                    <button onClick={onClose} className="mt-4 text-panther-accent hover:underline">Start Shopping</button>
+                  </div>
+                ) : (
+                  cart.map((item) => (
+                    <div key={item.id} className="bg-panther-900 p-3 rounded-lg flex gap-3 border border-panther-700">
+                      <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded-md bg-gray-800" />
+                      <div className="flex-1 flex flex-col justify-between">
+                        <div>
+                          <h4 className="font-semibold text-white line-clamp-1">{item.name}</h4>
+                          <p className="text-panther-accent text-sm font-medium">₹{item.price}</p>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center gap-2 bg-panther-800 rounded px-2 py-1 border border-panther-700">
+                            <button 
+                              onClick={() => onUpdateQuantity(item.id, -1)}
+                              className="text-gray-400 hover:text-white px-1"
+                            >-</button>
+                            <span className="text-white text-sm w-4 text-center">{item.quantity}</span>
+                            <button 
+                              onClick={() => onUpdateQuantity(item.id, 1)}
+                              className="text-gray-400 hover:text-white px-1"
+                            >+</button>
+                          </div>
+                          <button 
+                            onClick={() => onRemove(item.id)}
+                            className="text-red-400 hover:text-red-300 p-1"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {cart.length > 0 && (
+                <div className="p-5 border-t border-panther-700 bg-panther-800">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-gray-400">Total Amount</span>
+                    <span className="text-2xl font-bold text-white">₹{total}</span>
+                  </div>
+                  <button 
+                    onClick={onCheckout}
+                    className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-green-500/20 transition-all active:scale-95"
+                  >
+                    Checkout Now
+                  </button>
+                  <p className="text-xs text-center text-gray-500 mt-3">
+                    Checkout via WhatsApp securely
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      // --- CheckoutModal ---
+      const CheckoutModal = ({ isOpen, onClose, cart, onClearCart }) => {
+        const [formData, setFormData] = useState({
+          fullName: '',
+          phone: '',
+          houseNo: '',
+          area: '',
+          locality: '',
+          city: '',
+          state: '',
+          pincode: ''
+        });
+        const [paymentMethod, setPaymentMethod] = useState('cod');
+        const [isSubmitting, setIsSubmitting] = useState(false);
+        const [success, setSuccess] = useState(false);
+        const [errorMsg, setErrorMsg] = useState('');
+        const [copiedUpi, setCopiedUpi] = useState(false);
+        const [generatedWhatsAppLink, setGeneratedWhatsAppLink] = useState('');
+
+        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const upiId = "hmoinuddin84@oksbi"; 
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi%3A%2F%2Fpay%3Fpa%3D${upiId}%26pn%3DBLACKPANTHER%20Store%26am%3D${total}%26cu%3DINR`;
+
+        if (!isOpen) return null;
+
+        const handleChange = (e) => {
+          setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        };
+
+        const handleCopyUpi = () => {
+          navigator.clipboard.writeText(upiId);
+          setCopiedUpi(true);
+          setTimeout(() => setCopiedUpi(false), 2000);
+        };
+
+        const handlePlaceOrder = async (e) => {
+          e.preventDefault();
+          setIsSubmitting(true);
+          setErrorMsg('');
+
+          try {
+            const orderItems = cart.map(item => `${item.name} x${item.quantity}`).join(', ');
+            const fullAddress = `${formData.houseNo}, ${formData.area}, ${formData.locality}, ${formData.city}, ${formData.state} - ${formData.pincode}`;
+            const paymentStatus = paymentMethod === 'online' ? 'PAID ONLINE (Verify QR)' : 'Cash on Delivery';
+
+            const waMessage = `*🐯 NEW ORDER ALERT - BLACKPANTHER*
+--------------------------------
+*👤 Customer Details:*
+Name: ${formData.fullName}
+Phone: ${formData.phone}
+Address: ${fullAddress}
+
+*🛒 Order Summary:*
+${cart.map(item => `• ${item.name} (x${item.quantity})`).join('\n')}
+
+*💰 Total Amount:* ₹${total}
+*💳 Payment:* ${paymentStatus}
+--------------------------------
+Please confirm dispatch timeline.`;
+
+            const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(waMessage)}`;
+            setGeneratedWhatsAppLink(whatsappUrl);
+
+            const payload = {
+              date: new Date().toISOString(),
+              customerName: formData.fullName,
+              phone: formData.phone,
+              email: "hmoinuddin84@gmail.com",
+              address: fullAddress,
+              items: orderItems,
+              totalAmount: total,
+              paymentMethod: paymentStatus,
+              status: 'New'
+            };
+
+            if (GOOGLE_SCRIPT_URL.includes("XXXXXXXX")) {
+              console.warn("Google Script URL is not configured.");
+              await new Promise(resolve => setTimeout(resolve, 1500));
+            } else {
+              await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+            }
+
+            setSuccess(true);
+            onClearCart();
+            window.open(whatsappUrl, '_blank');
+
+          } catch (error) {
+            console.error("Order Error:", error);
+            setErrorMsg("Connection failed. Please check your internet.");
+          } finally {
+            setIsSubmitting(false);
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
+             <div 
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={onClose}
+            ></div>
+
+            <div className="relative w-full sm:max-w-2xl bg-panther-800 rounded-t-2xl sm:rounded-2xl shadow-2xl border-t sm:border border-panther-700 overflow-hidden flex flex-col h-[90vh] sm:h-auto sm:max-h-[90vh]">
+              {success ? (
+                <div className="p-8 md:p-12 flex flex-col items-center text-center animate-fade-in my-auto overflow-y-auto">
+                  <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6 shrink-0">
+                    <CheckCircle size={40} className="text-green-500" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Order Placed Successfully!</h3>
+                  <p className="text-gray-400 mb-6 max-w-md">
+                    Thank you, {formData.fullName}. Your order details have been saved and sent to our team.
+                    <br/><br/>
+                    <span className="text-yellow-400 text-sm">⚠️ If WhatsApp did not open automatically, please click the button below to complete your order.</span>
+                  </p>
+                  
+                  <a 
+                    href={generatedWhatsAppLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3 px-8 rounded-full flex items-center gap-2 mb-4 shadow-lg hover:shadow-green-500/20 transition-all"
+                  >
+                    <MessageCircle size={20} />
+                    Send Order Details on WhatsApp
+                  </a>
+
+                  <button 
+                    onClick={onClose}
+                    className="text-gray-400 hover:text-white text-sm hover:underline"
+                  >
+                    Close and Continue Shopping
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handlePlaceOrder} className="flex flex-col h-full overflow-hidden">
+                  <div className="shrink-0 p-4 border-b border-panther-700 flex justify-between items-center bg-panther-900 z-10">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="text-panther-accent" />
+                      <h2 className="text-xl font-bold text-white">Delivery Details</h2>
+                    </div>
+                    <button type="button" onClick={onClose} className="text-gray-400 hover:text-white">
+                      <X size={24} />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0 scrollbar-thin scrollbar-thumb-panther-accent scrollbar-track-panther-900">
+                    
+                    <div className="space-y-3">
+                       <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider">Contact Information</h3>
+                       <div className="grid grid-cols-1 gap-3">
+                          <input 
+                            required
+                            name="fullName"
+                            value={formData.fullName}
+                            onChange={handleChange}
+                            type="text" 
+                            className="w-full bg-panther-900 border border-panther-700 rounded-lg p-3 text-white focus:border-panther-accent focus:outline-none placeholder-gray-500 text-sm"
+                            placeholder="Full Name (Required)"
+                          />
+                          <input 
+                            required
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            type="tel" 
+                            pattern="[0-9]{10}"
+                            maxLength={10}
+                            className="w-full bg-panther-900 border border-panther-700 rounded-lg p-3 text-white focus:border-panther-accent focus:outline-none placeholder-gray-500 text-sm"
+                            placeholder="Phone Number (10 digits)"
+                          />
+                       </div>
+                    </div>
+
+                    <div className="space-y-3">
+                       <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider">Shipping Address</h3>
+                       
+                       <div className="grid grid-cols-2 gap-3">
+                          <input 
+                            required
+                            name="pincode"
+                            value={formData.pincode}
+                            onChange={handleChange}
+                            type="text" 
+                            pattern="[0-9]{6}"
+                            maxLength={6}
+                            className="w-full bg-panther-900 border border-panther-700 rounded-lg p-3 text-white focus:border-panther-accent focus:outline-none placeholder-gray-500 text-sm"
+                            placeholder="Pincode"
+                          />
+                          <input 
+                            required
+                            name="state"
+                            value={formData.state}
+                            onChange={handleChange}
+                            type="text" 
+                            className="w-full bg-panther-900 border border-panther-700 rounded-lg p-3 text-white focus:border-panther-accent focus:outline-none placeholder-gray-500 text-sm"
+                            placeholder="State"
+                          />
+                          <input 
+                            required
+                            name="city"
+                            value={formData.city}
+                            onChange={handleChange}
+                            type="text" 
+                            className="w-full bg-panther-900 border border-panther-700 rounded-lg p-3 text-white focus:border-panther-accent focus:outline-none placeholder-gray-500 text-sm"
+                            placeholder="City/District"
+                          />
+                          <input 
+                            required
+                            name="locality"
+                            value={formData.locality}
+                            onChange={handleChange}
+                            type="text" 
+                            className="w-full bg-panther-900 border border-panther-700 rounded-lg p-3 text-white focus:border-panther-accent focus:outline-none placeholder-gray-500 text-sm"
+                            placeholder="Locality"
+                          />
+                       </div>
+
+                       <input 
+                          required
+                          name="houseNo"
+                          value={formData.houseNo}
+                          onChange={handleChange}
+                          type="text" 
+                          className="w-full bg-panther-900 border border-panther-700 rounded-lg p-3 text-white focus:border-panther-accent focus:outline-none placeholder-gray-500 text-sm"
+                          placeholder="Flat, House no., Building, Apt"
+                       />
+                       
+                       <input 
+                          required
+                          name="area"
+                          value={formData.area}
+                          onChange={handleChange}
+                          type="text" 
+                          className="w-full bg-panther-900 border border-panther-700 rounded-lg p-3 text-white focus:border-panther-accent focus:outline-none placeholder-gray-500 text-sm"
+                          placeholder="Area, Street, Sector, Village"
+                       />
+                    </div>
+
+                    <div className="space-y-3">
+                       <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider">Payment Method</h3>
+                       <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('cod')}
+                            className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
+                              paymentMethod === 'cod' 
+                              ? 'bg-panther-accent/10 border-panther-accent text-white' 
+                              : 'bg-panther-900 border-panther-700 text-gray-400 hover:border-gray-500'
+                            }`}
+                          >
+                            <Banknote size={20} className="mb-1" />
+                            <span className="font-bold text-xs">Cash on Delivery</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('online')}
+                            className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${
+                              paymentMethod === 'online' 
+                              ? 'bg-panther-accent/10 border-panther-accent text-white' 
+                              : 'bg-panther-900 border-panther-700 text-gray-400 hover:border-gray-500'
+                            }`}
+                          >
+                            <QrCode size={20} className="mb-1" />
+                            <span className="font-bold text-xs">Pay Online (QR)</span>
+                          </button>
+                       </div>
+                    </div>
+
+                    {paymentMethod === 'online' && (
+                      <div className="bg-white p-4 rounded-xl flex flex-col items-center border-2 border-panther-accent/50 relative overflow-hidden shadow-xl">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+                        
+                        <h4 className="text-panther-900 font-extrabold text-base mb-3 text-center">Scan & Pay via UPI</h4>
+                        
+                        <div className="p-2 bg-white rounded-xl shadow-lg border border-gray-100 mb-3">
+                          <img src={qrCodeUrl} alt="Payment QR Code" className="w-40 h-40 rounded-lg" />
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg mb-2 w-full max-w-xs justify-between border border-gray-200">
+                          <span className="text-xs font-mono text-gray-700 font-bold truncate select-all">{upiId}</span>
+                          <button 
+                            type="button"
+                            onClick={handleCopyUpi}
+                            className="text-panther-accent hover:text-purple-700 p-1 transition-colors flex items-center justify-center"
+                            title="Copy UPI ID"
+                          >
+                            {copiedUpi ? <Check size={14} className="text-green-600"/> : <Copy size={14} />}
+                          </button>
+                        </div>
+
+                        <div className="text-xs text-gray-500 text-center max-w-xs space-y-1">
+                          <p>Accepted: GPay, PhonePe, Paytm</p>
+                          <div className="flex items-center justify-center gap-2 mt-1">
+                             <span className="font-bold text-panther-900 text-sm">Total: ₹{total}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {paymentMethod === 'cod' && (
+                      <div className="bg-panther-900 p-4 rounded-lg border border-panther-700 flex justify-between items-center">
+                        <span className="text-gray-300 font-medium">Total Payable</span>
+                        <span className="text-xl font-bold text-panther-accent">₹{total}</span>
+                      </div>
+                    )}
+
+                    {errorMsg && (
+                      <div className="p-3 bg-red-900/50 border border-red-500 rounded text-red-200 text-sm text-center">
+                        {errorMsg}
+                      </div>
+                    )}
+                    
+                    <div className="h-4"></div>
+                  </div>
+
+                  <div className="shrink-0 p-4 border-t border-panther-700 bg-panther-800 z-10">
+                    <button 
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full bg-panther-accent hover:bg-purple-600 disabled:opacity-50 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-purple-500/20"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="animate-spin" size={18} />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Send size={18} />
+                          Confirm & Place Order
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      // --- AiAssistant ---
+      const AiAssistant = () => {
+        const [isOpen, setIsOpen] = useState(false);
+        const [input, setInput] = useState('');
+        const [isLoading, setIsLoading] = useState(false);
+        const [messages, setMessages] = useState([
+          { role: 'model', text: "Hello! I'm PantherBot. Looking for something specific or need a gift idea?" }
+        ]);
+        const messagesEndRef = useRef(null);
+
+        const scrollToBottom = () => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        };
+
+        useEffect(() => {
+          scrollToBottom();
+        }, [messages]);
+
+        const handleSend = async () => {
+          if (!input.trim() || isLoading) return;
+
+          const userMsg = { role: 'user', text: input };
+          setMessages(prev => [...prev, userMsg]);
+          setInput('');
+          setIsLoading(true);
+
+          const history = messages.map(m => ({
+            role: m.role,
+            parts: [{ text: m.text }]
+          }));
+
+          const responseText = await getProductRecommendation(input, history);
+          
+          setMessages(prev => [...prev, { role: 'model', text: responseText }]);
+          setIsLoading(false);
+        };
+
+        const handleKeyPress = (e) => {
+          if (e.key === 'Enter') handleSend();
+        };
+
+        return (
+          <>
+            {!isOpen && (
+              <button
+                onClick={() => setIsOpen(true)}
+                className="fixed bottom-6 right-6 bg-panther-accent hover:bg-purple-600 text-white p-4 rounded-full shadow-lg hover:shadow-purple-500/30 transition-all z-40 animate-bounce-slow"
+              >
+                <Sparkles size={24} />
+              </button>
+            )}
+
+            {isOpen && (
+              <div className="fixed bottom-6 right-6 w-80 sm:w-96 bg-panther-800 border border-panther-700 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-slide-up h-[500px]">
+                <div className="bg-panther-accent p-4 flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-white">
+                    <Sparkles size={20} />
+                    <h3 className="font-bold">PantherBot AI</h3>
+                  </div>
+                  <button 
+                    onClick={() => setIsOpen(false)}
+                    className="text-white/80 hover:text-white transition-colors"
+                  >
+                    <Minimize2 size={18} />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-panther-900/50">
+                  {messages.map((msg, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div 
+                        className={`max-w-[80%] p-3 rounded-lg text-sm ${
+                          msg.role === 'user' 
+                            ? 'bg-panther-accent text-white rounded-br-none' 
+                            : 'bg-panther-700 text-gray-200 rounded-bl-none'
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                    </div>
+                  ))}
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-panther-700 p-3 rounded-lg rounded-bl-none flex items-center gap-2">
+                        <Loader2 size={16} className="animate-spin text-panther-accent" />
+                        <span className="text-gray-400 text-xs">Thinking...</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                <div className="p-3 bg-panther-800 border-t border-panther-700 flex gap-2">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Ask me anything..."
+                    className="flex-1 bg-panther-900 text-white text-sm rounded-lg px-4 py-2 border border-panther-700 focus:outline-none focus:border-panther-accent"
+                  />
+                  <button 
+                    onClick={handleSend}
+                    disabled={isLoading || !input.trim()}
+                    className="bg-panther-accent disabled:opacity-50 text-white p-2 rounded-lg hover:bg-purple-600 transition-colors"
+                  >
+                    <Send size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      };
+
+      // --- HomePage ---
+      const HomePage = ({ products, onAddToCart }) => {
+        const featuredProducts = products.slice(0, 3);
+
+        return (
+          <>
+            <div className="relative bg-panther-800 overflow-hidden">
+              <div className="absolute inset-0">
+                <img 
+                  src="https://picsum.photos/1920/600?grayscale" 
+                  className="w-full h-full object-cover opacity-20" 
+                  alt="Hero Background"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-panther-900 to-transparent"></div>
+              </div>
+              <div className="relative max-w-7xl mx-auto py-32 px-4 sm:px-6 lg:px-8 text-center z-10">
+                <div className="inline-flex items-center gap-2 bg-panther-accent/20 border border-panther-accent/40 rounded-full px-4 py-1.5 mb-8 backdrop-blur-sm">
+                  <span className="w-2 h-2 rounded-full bg-panther-accent animate-pulse"></span>
+                  <span className="text-panther-accent text-sm font-bold tracking-wide uppercase">New Collection Drop</span>
+                </div>
+                <h1 className="text-5xl md:text-7xl font-black text-white tracking-tighter mb-6 leading-tight">
+                  UNLEASH YOUR <br/>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-panther-accent filter drop-shadow-lg">INNER POWER</span>
+                </h1>
+                <p className="mt-6 text-xl text-gray-300 max-w-2xl mx-auto font-light leading-relaxed">
+                  Premium gear delivered directly to your doorstep. Verified quality. Secure payments via WhatsApp.
+                </p>
+                
+                <div className="mt-10 flex justify-center gap-4">
+                  <Link 
+                    to="/shop" 
+                    className="bg-white text-panther-900 hover:bg-gray-200 font-bold py-4 px-8 rounded-xl shadow-xl hover:scale-105 transition-all duration-300 flex items-center gap-2"
+                  >
+                    Shop Collection <ArrowRight size={20} />
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+              <div className="flex items-center justify-between mb-12">
+                <div className="flex items-center gap-3">
+                  <div className="bg-panther-accent p-2 rounded-lg">
+                    <Zap className="text-white" size={24} fill="currentColor" />
+                  </div>
+                  <h2 className="text-3xl font-bold text-white">Trending Gear</h2>
+                </div>
+                <Link to="/shop" className="hidden sm:flex items-center gap-2 text-panther-accent font-semibold hover:text-white transition-colors group">
+                  View All Products 
+                  <ArrowRight size={18} className="transform group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {featuredProducts.map((product) => (
+                  <ProductCard 
+                    key={product.id} 
+                    product={product} 
+                    onAddToCart={onAddToCart} 
+                  />
+                ))}
+              </div>
+
+              <div className="mt-12 text-center sm:hidden">
+                 <Link to="/shop" className="inline-block bg-panther-800 hover:bg-panther-700 text-white font-bold py-3 px-8 rounded-xl border border-panther-700 transition-colors">
+                  View All Products
+                </Link>
+              </div>
+            </main>
+            
+            <div className="bg-panther-800 border-y border-panther-700 py-16">
+              <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                <div className="p-6">
+                   <h3 className="text-white text-xl font-bold mb-2">Premium Quality</h3>
+                   <p className="text-gray-400">Hand-picked gear that meets the highest standards.</p>
+                </div>
+                <div className="p-6 border-l-0 md:border-l border-panther-700">
+                   <h3 className="text-white text-xl font-bold mb-2">Fast Shipping</h3>
+                   <p className="text-gray-400">Express delivery across the country.</p>
+                </div>
+                <div className="p-6 border-l-0 md:border-l border-panther-700">
+                   <h3 className="text-white text-xl font-bold mb-2">Secure Support</h3>
+                   <p className="text-gray-400">24/7 assistance via WhatsApp & AI.</p>
+                </div>
+              </div>
+            </div>
+          </>
+        );
+      };
+
+      // --- ShopPage ---
+      const ShopPage = ({ products, onAddToCart }) => {
+        const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+        const [selectedCategory, setSelectedCategory] = useState('All');
+        const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+        const [sortBy, setSortBy] = useState('featured');
+        const [inStockOnly, setInStockOnly] = useState(false);
+
+        const categories = useMemo(() => {
+          const cats = Array.from(new Set(products.map(p => p.category)));
+          return ['All', ...cats.sort()];
+        }, [products]);
+
+        const processedProducts = useMemo(() => {
+          let result = [...products];
+          if (selectedCategory !== 'All') {
+            result = result.filter(p => p.category === selectedCategory);
+          }
+          const min = priceRange.min ? parseFloat(priceRange.min) : 0;
+          const max = priceRange.max ? parseFloat(priceRange.max) : Infinity;
+          result = result.filter(p => p.price >= min && p.price <= max);
+          
+          if (sortBy === 'price-asc') result.sort((a, b) => a.price - b.price);
+          else if (sortBy === 'price-desc') result.sort((a, b) => b.price - a.price);
+          else if (sortBy === 'name-asc') result.sort((a, b) => a.name.localeCompare(b.name));
+          else if (sortBy === 'name-desc') result.sort((a, b) => b.name.localeCompare(a.name));
+
+          return result;
+        }, [products, selectedCategory, priceRange, sortBy, inStockOnly]);
+
+        const handlePriceChange = (type, value) => {
+          setPriceRange(prev => ({ ...prev, [type]: value }));
+        };
+
+        return (
+          <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+            <div className="flex flex-col lg:flex-row gap-8">
+              <div className="lg:hidden flex justify-between items-center mb-4">
+                <button 
+                  onClick={() => setIsMobileFilterOpen(true)}
+                  className="flex items-center gap-2 bg-panther-800 text-white px-4 py-2 rounded-lg border border-panther-700"
+                >
+                  <SlidersHorizontal size={18} />
+                  Filters
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400 text-sm">{processedProducts.length} Items</span>
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="bg-panther-800 text-white text-sm px-3 py-2 rounded-lg border border-panther-700 outline-none focus:border-panther-accent"
+                  >
+                    <option value="featured">Featured</option>
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="price-desc">Price: High to Low</option>
+                    <option value="name-asc">Name: A - Z</option>
+                    <option value="name-desc">Name: Z - A</option>
+                  </select>
+                </div>
+              </div>
+
+              <aside className={`
+                fixed inset-0 z-50 bg-panther-900 lg:static lg:bg-transparent lg:z-auto lg:w-64 lg:block
+                ${isMobileFilterOpen ? 'block' : 'hidden'}
+              `}>
+                <div className="h-full overflow-y-auto p-5 lg:p-0">
+                  <div className="flex justify-between items-center lg:hidden mb-6">
+                    <h2 className="text-xl font-bold text-white">Filters</h2>
+                    <button onClick={() => setIsMobileFilterOpen(false)} className="text-gray-400">
+                      <X size={24} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div>
+                      <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+                        Category
+                      </h3>
+                      <div className="space-y-2">
+                        {categories.map(cat => (
+                          <label key={cat} className="flex items-center gap-3 cursor-pointer group">
+                            <div className={`
+                              w-5 h-5 rounded border flex items-center justify-center transition-colors
+                              ${selectedCategory === cat 
+                                ? 'bg-panther-accent border-panther-accent' 
+                                : 'border-gray-600 group-hover:border-gray-400'}
+                            `}>
+                               {selectedCategory === cat && <div className="w-2 h-2 bg-white rounded-full" />}
+                            </div>
+                            <input 
+                              type="radio" 
+                              name="category" 
+                              value={cat}
+                              checked={selectedCategory === cat}
+                              onChange={() => setSelectedCategory(cat)}
+                              className="hidden" 
+                            />
+                            <span className={`text-sm ${selectedCategory === cat ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'}`}>
+                              {cat}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-white font-bold mb-4">Price Range (₹)</h3>
+                      <div className="grid grid-cols-2 gap-3 mb-2">
+                        <input
+                          type="number"
+                          placeholder="Min"
+                          value={priceRange.min}
+                          onChange={(e) => handlePriceChange('min', e.target.value)}
+                          className="w-full bg-panther-800 border border-panther-700 rounded p-2 text-sm text-white focus:border-panther-accent outline-none"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Max"
+                          value={priceRange.max}
+                          onChange={(e) => handlePriceChange('max', e.target.value)}
+                          className="w-full bg-panther-800 border border-panther-700 rounded p-2 text-sm text-white focus:border-panther-accent outline-none"
+                        />
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={() => {
+                        setSelectedCategory('All');
+                        setPriceRange({ min: '', max: '' });
+                        setInStockOnly(false);
+                      }}
+                      className="text-panther-accent text-sm hover:underline"
+                    >
+                      Reset All Filters
+                    </button>
+
+                    <button 
+                      onClick={() => setIsMobileFilterOpen(false)}
+                      className="w-full mt-8 bg-panther-accent text-white font-bold py-3 rounded-lg lg:hidden"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
+                </div>
+              </aside>
+
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-white hidden lg:block">
+                    {selectedCategory === 'All' ? 'All Products' : selectedCategory}
+                  </h2>
+                  
+                  <div className="hidden lg:flex items-center gap-4 ml-auto">
+                     <span className="text-gray-400 text-sm">{processedProducts.length} Products Found</span>
+                     <div className="relative group">
+                        <select 
+                          value={sortBy}
+                          onChange={(e) => setSortBy(e.target.value)}
+                          className="appearance-none bg-panther-800 text-white pl-4 pr-10 py-2 rounded-lg border border-panther-700 cursor-pointer focus:border-panther-accent outline-none"
+                        >
+                          <option value="featured">Sort by: Featured</option>
+                          <option value="price-asc">Price: Low to High</option>
+                          <option value="price-desc">Price: High to Low</option>
+                          <option value="name-asc">Name: A - Z</option>
+                          <option value="name-desc">Name: Z - A</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-3 text-gray-400 pointer-events-none" size={16} />
+                     </div>
+                  </div>
+                </div>
+
+                {processedProducts.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 animate-fade-in">
+                    {processedProducts.map((product) => (
+                      <ProductCard 
+                        key={product.id} 
+                        product={product} 
+                        onAddToCart={onAddToCart} 
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-24 text-center bg-panther-800/50 rounded-2xl border border-panther-700 border-dashed">
+                    <Filter className="text-gray-600 mb-4" size={48} />
+                    <p className="text-gray-400 text-xl font-medium mb-2">No products match your filters.</p>
+                    <button 
+                       onClick={() => {
+                        setSelectedCategory('All');
+                        setPriceRange({ min: '', max: '' });
+                        setInStockOnly(false);
+                      }}
+                      className="text-panther-accent hover:underline mt-2"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </main>
+        );
+      };
+
+      // --- ProductDetailsPage ---
+      const ProductDetailsPage = ({ onAddToCart }) => {
+        const { id } = useParams();
+        const navigate = useNavigate();
+        const [copied, setCopied] = useState(false);
+        
+        const product = PRODUCTS.find(p => p.id === id);
+
+        useEffect(() => {
+          window.scrollTo(0, 0);
+        }, [id]);
+
+        const handleShare = async () => {
+          if (!product) return;
+          const url = window.location.href;
+          const shareData = {
+            title: product.name,
+            text: `Check out ${product.name} on BLACKPANTHER Store!`,
+            url: url
+          };
+
+          if (navigator.share) {
+            try { await navigator.share(shareData); } catch (err) { console.error("Error sharing:", err); }
+          } else {
+            try {
+              await navigator.clipboard.writeText(url);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            } catch (err) { console.error("Failed to copy", err); }
+          }
+        };
+
+        if (!product) {
+          return (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+              <h2 className="text-3xl font-bold text-white mb-4">Product Not Found</h2>
+              <Link to="/" className="text-panther-accent hover:underline">Return to Store</Link>
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex-1 bg-panther-900">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+              <button 
+                onClick={() => navigate(-1)} 
+                className="flex items-center text-gray-400 hover:text-white mb-8 transition-colors"
+              >
+                <ArrowLeft size={20} className="mr-2" />
+                Back to Collection
+              </button>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="relative rounded-2xl overflow-hidden bg-panther-800 border border-panther-700 shadow-2xl group">
+                  <img 
+                    src={product.image} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover min-h-[400px] lg:min-h-[600px] transform transition-transform duration-700 hover:scale-110"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="bg-panther-accent text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                      {product.category}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-center">
+                  <div className="flex justify-between items-start">
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
+                      {product.name}
+                    </h1>
+                    <button 
+                      onClick={handleShare}
+                      className="p-3 bg-panther-800 rounded-full text-gray-400 hover:text-white hover:bg-panther-700 transition-all border border-panther-700"
+                      title="Share Product"
+                    >
+                      {copied ? <Check size={24} className="text-green-500" /> : <Share2 size={24} />}
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 mb-6">
+                    <span className="text-3xl font-bold text-panther-accent">₹{product.price}</span>
+                    <div className="flex items-center gap-1 text-yellow-500">
+                      <Star size={18} fill="currentColor" />
+                      <Star size={18} fill="currentColor" />
+                      <Star size={18} fill="currentColor" />
+                      <Star size={18} fill="currentColor" />
+                      <Star size={18} fill="currentColor" />
+                      <span className="text-gray-400 text-sm ml-2">(42 reviews)</span>
+                    </div>
+                  </div>
+
+                  <p className="text-gray-300 text-lg leading-relaxed mb-8">
+                    {product.description}
+                    <br/><br/>
+                    Engineered for those who demand excellence. This {product.name.toLowerCase()} combines cutting-edge technology with tactical aesthetics to deliver superior performance in any environment.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                    <div className="flex items-center gap-3 text-gray-300">
+                      <div className="bg-panther-800 p-2 rounded-lg text-panther-accent">
+                        <Shield size={20} />
+                      </div>
+                      <span className="text-sm">1 Year Warranty</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-300">
+                      <div className="bg-panther-800 p-2 rounded-lg text-panther-accent">
+                        <Truck size={20} />
+                      </div>
+                      <span className="text-sm">Free Express Shipping</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-300">
+                      <div className="bg-panther-800 p-2 rounded-lg text-panther-accent">
+                        <RotateCcw size={20} />
+                      </div>
+                      <span className="text-sm">7-Day Easy Returns</span>
+                    </div>
+                     <div className="flex items-center gap-3 text-gray-300">
+                      <div className="bg-panther-800 p-2 rounded-lg text-panther-accent">
+                        <Check size={20} />
+                      </div>
+                      <span className="text-sm">Verified Authentic</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => onAddToCart(product)}
+                      className="flex-1 bg-panther-accent hover:bg-purple-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-purple-500/30 transition-all active:scale-95 flex items-center justify-center gap-3"
+                    >
+                      <ShoppingBag size={24} />
+                      Add to Cart
+                    </button>
+                  </div>
+                  
+                  <p className="mt-6 text-sm text-center text-gray-500">
+                    Secure Checkout guaranteed. Orders processed within 24 hours.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // --- NavigationBar ---
+      const NavigationBar = ({ searchTerm, setSearchTerm, cartCount, openCart }) => {
+        const navigate = useNavigate();
+        const location = useLocation();
+        const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+        const handleSearchChange = (e) => {
+          setSearchTerm(e.target.value);
+          if (e.target.value.length > 0 && location.pathname !== '/shop') {
+            navigate('/shop');
+          }
+        };
+
+        return (
+          <nav className="sticky top-0 z-40 bg-panther-900/95 backdrop-blur-md border-b border-panther-700 transition-all duration-300">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-20">
+                <Link to="/" className="flex items-center gap-2 group">
+                  <div className="w-10 h-10 bg-panther-accent rounded-lg flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300 shadow-lg shadow-purple-500/20">
+                    <span className="text-white font-black text-xl">B</span>
+                  </div>
+                  <h1 className="text-2xl font-bold tracking-tighter text-white uppercase hidden sm:block">
+                    {STORE_NAME}
+                  </h1>
+                </Link>
+
+                <div className="hidden md:flex items-center gap-8 mx-8">
+                  <Link to="/" className={`font-medium hover:text-panther-accent transition-colors ${location.pathname === '/' ? 'text-white' : 'text-gray-400'}`}>Home</Link>
+                  <Link to="/shop" className={`font-medium hover:text-panther-accent transition-colors ${location.pathname === '/shop' ? 'text-white' : 'text-gray-400'}`}>Shop All</Link>
+                </div>
+
+                <div className="flex-1 max-w-md mx-4 hidden md:block group">
+                  <div className="relative">
+                    <input 
+                      type="text"
+                      placeholder="Search gear..."
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      onFocus={() => {
+                         if (location.pathname !== '/shop') navigate('/shop');
+                      }}
+                      className="w-full bg-panther-800 text-gray-200 pl-10 pr-4 py-2.5 rounded-full border border-panther-700 focus:outline-none focus:border-panther-accent focus:ring-1 focus:ring-panther-accent transition-all group-hover:border-gray-600"
+                    />
+                    <Search className="absolute left-3 top-3 text-gray-500 group-hover:text-gray-300 transition-colors" size={18} />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <button 
+                    className="relative p-2 text-gray-300 hover:text-white transition-colors hover:bg-panther-800 rounded-full"
+                    onClick={openCart}
+                  >
+                    <ShoppingBag size={24} />
+                    {cartCount > 0 && (
+                      <span className="absolute top-0 right-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-panther-accent rounded-full border-2 border-panther-900">
+                        {cartCount}
+                      </span>
+                    )}
+                  </button>
+                  <button 
+                    className="md:hidden text-gray-300 hover:text-white"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  >
+                    {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            {isMobileMenuOpen && (
+              <div className="md:hidden bg-panther-800 border-t border-panther-700 animate-slide-down">
+                <div className="px-4 pt-4 pb-6 space-y-4">
+                   <div className="relative">
+                    <input 
+                      type="text"
+                      placeholder="Search gear..."
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      className="w-full bg-panther-900 text-gray-200 pl-10 pr-4 py-3 rounded-lg border border-panther-700 focus:border-panther-accent outline-none"
+                    />
+                    <Search className="absolute left-3 top-3.5 text-gray-500" size={18} />
+                  </div>
+                  <Link 
+                    to="/" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-panther-700"
+                  >
+                    Home
+                  </Link>
+                  <Link 
+                    to="/shop" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block px-3 py-2 rounded-md text-base font-medium text-white hover:bg-panther-700"
+                  >
+                    Shop All Products
+                  </Link>
+                </div>
+              </div>
+            )}
+          </nav>
+        );
+      };
+
+      // --- App ---
+      const App = () => {
+        const [cart, setCart] = useState([]);
+        const [isCartOpen, setIsCartOpen] = useState(false);
+        const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+        const [searchTerm, setSearchTerm] = useState('');
+
+        const addToCart = (product) => {
+          setCart(prev => {
+            const existing = prev.find(item => item.id === product.id);
+            if (existing) {
+              return prev.map(item => 
+                item.id === product.id 
+                  ? { ...item, quantity: item.quantity + 1 }
+                  : item
+              );
+            }
+            return [...prev, { ...product, quantity: 1 }];
+          });
+          setIsCartOpen(true);
+        };
+
+        const updateQuantity = (id, delta) => {
+          setCart(prev => prev.map(item => {
+            if (item.id === id) {
+              const newQty = Math.max(0, item.quantity + delta);
+              return { ...item, quantity: newQty };
+            }
+            return item;
+          }).filter(item => item.quantity > 0));
+        };
+
+        const removeFromCart = (id) => {
+          setCart(prev => prev.filter(item => item.id !== id));
+        };
+
+        const clearCart = () => setCart([]);
+
+        const filteredProducts = PRODUCTS.filter(p => 
+          p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+          p.category.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        return (
+          <HashRouter>
+            <div className="min-h-screen flex flex-col">
+              <NavigationBar 
+                searchTerm={searchTerm} 
+                setSearchTerm={setSearchTerm} 
+                cartCount={cart.reduce((a, b) => a + b.quantity, 0)}
+                openCart={() => setIsCartOpen(true)}
+              />
+
+              <Routes>
+                <Route path="/" element={<HomePage products={PRODUCTS} onAddToCart={addToCart} />} />
+                <Route path="/shop" element={<ShopPage products={filteredProducts} onAddToCart={addToCart} />} />
+                <Route path="/product/:id" element={<ProductDetailsPage onAddToCart={addToCart} />} />
+              </Routes>
+
+              <footer className="bg-panther-900 border-t border-panther-700 py-12">
+                <div className="max-w-7xl mx-auto px-4 text-center">
+                  <h2 className="text-2xl font-bold text-white mb-4">{STORE_NAME}</h2>
+                  <div className="flex justify-center gap-6 mb-8 text-gray-400">
+                     <Link to="/" className="hover:text-white">Home</Link>
+                     <Link to="/shop" className="hover:text-white">Shop</Link>
+                     <span className="hover:text-white cursor-pointer">Terms</span>
+                     <span className="hover:text-white cursor-pointer">Contact</span>
+                  </div>
+                  <p className="text-gray-500">
+                    &copy; {new Date().getFullYear()} All rights reserved. <br/>
+                    Dropshipping fulfillment by {STORE_NAME} Logistics.
+                  </p>
+                </div>
+              </footer>
+
+              <CartSidebar 
+                isOpen={isCartOpen} 
+                onClose={() => setIsCartOpen(false)} 
+                cart={cart}
+                onUpdateQuantity={updateQuantity}
+                onRemove={removeFromCart}
+                onCheckout={() => {
+                  setIsCartOpen(false);
+                  setIsCheckoutOpen(true);
+                }}
+              />
+
+              <CheckoutModal 
+                isOpen={isCheckoutOpen}
+                onClose={() => setIsCheckoutOpen(false)}
+                cart={cart}
+                onClearCart={clearCart}
+              />
+
+              <AiAssistant />
+            </div>
+          </HashRouter>
+        );
+      };
+
+      // --- Root Rendering ---
+      const root = createRoot(document.getElementById('root'));
+      root.render(<App />);
+
+    </script>
+  </body>
+</html>
